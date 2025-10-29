@@ -77,7 +77,7 @@ OLD/
 # Experiments / results / runs
 # -------------------------------
 runs/
-results/
+# results/
 exp/
 exp_dir/
 **/exp_dir/
@@ -101,3 +101,4 @@ events.out.tfevents.*
 *.jpeg
 *.gif
 
+results/
