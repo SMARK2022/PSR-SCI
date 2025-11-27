@@ -10,9 +10,8 @@ from ..model.cldm import ControlLDM
 from ..model.gaussian_diffusion import extract_into_tensor
 from tqdm import tqdm
 
-sys.path.append('/home/newdisk/btsun/project/Predict-and-Subspace-Refine/DiffBIR/')
-from DiffBIR.utils.common import gaussian_weights, sliding_windows
-from DiffBIR.utils.cond_fn import Guidance
+from .common import gaussian_weights, sliding_windows
+from .cond_fn import Guidance
 
 
 # https://github.com/openai/guided-diffusion/blob/main/guided_diffusion/respace.py
@@ -73,7 +72,7 @@ class SpacedSampler(nn.Module):
     """
     Implementation for spaced sampling schedule proposed in IDDPM. This class is designed
     for sampling ControlLDM.
-    
+
     https://arxiv.org/pdf/2102.09672.pdf
     """
 
@@ -136,13 +135,13 @@ class SpacedSampler(nn.Module):
     def q_posterior_mean_variance(self, x_start: torch.Tensor, x_t: torch.Tensor, t: torch.Tensor) -> Tuple[torch.Tensor]:
         """
         Implement the posterior distribution q(x_{t-1}|x_t, x_0).
-        
+
         Args:
             x_start (torch.Tensor): The predicted images (NCHW) in timestep `t`.
             x_t (torch.Tensor): The sampled intermediate variables (NCHW) of timestep `t`.
-            t (torch.Tensor): Timestep (N) of `x_t`. `t` serves as an index to get 
+            t (torch.Tensor): Timestep (N) of `x_t`. `t` serves as an index to get
                 parameters for each timestep.
-        
+
         Returns:
             posterior_mean (torch.Tensor): Mean of the posterior distribution.
             posterior_variance (torch.Tensor): Variance of the posterior distribution.
@@ -244,17 +243,17 @@ class SpacedSampler(nn.Module):
         except Exception as e:  # 捕获所有异常
             # Release resources and clear the computation graph
             if 'pred_x0_rg' in locals():
-                pred_x0_rg.grad = None
-                pred_x0_rg.detach_()
-                del pred_x0_rg  # 仅删除定义过的变量
+                pred_x0_rg.grad = None  # noqa: F821
+                pred_x0_rg.detach_()  # noqa: F821
+                del pred_x0_rg  # 仅删除定义过的变量 # noqa: F821
 
             # 使用条件检查确保变量存在再进行删除
             if 'delta_pred_x0' in locals():
-                del delta_pred_x0
+                del delta_pred_x0  # noqa: F821
             if 'pred' in locals():
-                del pred
+                del pred  # noqa: F821
             if 'target' in locals():
-                del target
+                del target  # noqa: F821
             print(f"An error occurred: {e}")  # 打印错误信息
 
         # 清除缓存，释放 GPU 内存

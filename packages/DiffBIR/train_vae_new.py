@@ -1,14 +1,11 @@
 import os
+from pathlib import Path
 from argparse import ArgumentParser
 
 import torch
 import torch.nn.functional as F
 from omegaconf import OmegaConf
-from utils.common import instantiate_from_config, wavelet_decomposition
-
-# 启用cuDNN
-torch.backends.cudnn.enabled = True
-torch.backends.cudnn.benchmark = True
+from utils.common import instantiate_from_config
 
 import numpy as np
 from accelerate import Accelerator
@@ -21,6 +18,33 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchvision.utils import make_grid
 from tqdm import tqdm
+
+# Stdlib
+def get_basedir(up: int = 3) -> Path:
+    """Return dir `up` levels above running .py/.ipynb."""
+    try:
+        p = Path(__file__).resolve()  # .py
+    except NameError:
+        try:
+            import ipynbname  # notebook
+
+            p = Path(ipynbname.path()).resolve()
+        except Exception:
+            p = (Path.cwd() / "_dummy").resolve()  # fallback
+    for _ in range(up):
+        p = p.parent
+    return p
+
+
+# 启用cuDNN
+torch.backends.cudnn.enabled = True
+torch.backends.cudnn.benchmark = True
+# --- Setup base dir & env, then import deps (condensed) ---
+
+# only initialize BASE_DIR once
+BASE_DIR = globals().get("BASE_DIR")
+if not isinstance(BASE_DIR, Path) or not BASE_DIR.exists():
+    BASE_DIR = get_basedir()
 
 
 def co_augment_data(lq, gt):
@@ -152,8 +176,8 @@ def main(args) -> None:
     loader = DataLoader(dataset=dataset, batch_size=cfg.train.batch_size, num_workers=cfg.train.num_workers, shuffle=True, drop_last=True)
     if accelerator.is_local_main_process:
         print(f"Dataset contains {len(dataset):,} images from {dataset.file_list}")
-        psnr_val_base = torch.load("/home/newdisk/btsun/project/Predict-and-Subspace-Refine/datasets/psnr_val_base.pt").cpu().float()
-        psnr_val_gt = torch.load("/home/newdisk/btsun/project/Predict-and-Subspace-Refine/datasets/psnr_val_gt.pt").cpu().float()
+        psnr_val_base = torch.load(str(BASE_DIR) +"/datasets/psnr_val_base.pt").cpu().float()
+        psnr_val_gt = torch.load(str(BASE_DIR) +"/datasets/psnr_val_gt.pt").cpu().float()
 
     # Prepare models for training:
     vae.to(device)

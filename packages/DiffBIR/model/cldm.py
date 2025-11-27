@@ -11,11 +11,7 @@ from . import (
 from .unet import AttentionBlock
 from torch import nn
 
-sys.path.append("/home/newdisk/btsun/project/Predict-and-Subspace-Refine/DiffBIR/")
-sys.path.append("/home/newdisk/btsun/project/Predict-and-Subspace-Refine/DiffBIR/utils")
-sys.path.append("/home/newdisk/btsun/project/Predict-and-Subspace-Refine/")
-
-from DiffBIR.utils.common import count_vram_usage, gaussian_weights, sliding_windows
+from ..utils.common import count_vram_usage, gaussian_weights, sliding_windows
 
 
 def disabled_train(self: nn.Module) -> nn.Module:

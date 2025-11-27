@@ -1,6 +1,6 @@
 train:
   # experiment directory path
-  exp_dir: "/home/newdisk/btsun/project/Predict-and-Subspace-Refine/DiffBIR/exp_dir/exp_channel_vae01/"
+  exp_dir: "#TODO DiffBIR/exp_dir/exp_channel_vae01/"
   # stage 1 swinir path
   learning_rate: 8e-6
   warmup_steps: 500
@@ -15,7 +15,7 @@ train:
   log_every: 20
   ckpt_every: 500
   image_every: 100
-  # resume: "/home/newdisk/btsun/project/Predict-and-Subspace-Refine/DiffBIR/exp_dir/exp3/checkpoints/0015000.pt"
-  # vae_resume: "/home/newdisk/btsun/project/Predict-and-Subspace-Refine/DiffBIR/weights/raw_vae.pt"
-  channel_vae_resume: "/home/newdisk/btsun/project/Predict-and-Subspace-Refine/weights/model_vae_c14_bu2_k31_7_r_allca_k31_2024-06-06_loss0.000583.pt"
-  vae_resume: /home/newdisk/btsun/project/Predict-and-Subspace-Refine/DiffBIR/exp_dir/exp_vae02f01/checkpoints/0040000_vae.pt
+  # resume: "#TODO DiffBIR/exp_dir/exp3/checkpoints/0015000.pt"
+  # vae_resume: "#TODO DiffBIR/weights/raw_vae.pt"
+  channel_vae_resume: "#TODO weights/model_vae_c14_bu2_k31_7_r_allca_k31_2024-06-06_loss0.000583.pt"
+  vae_resume: #TODO DiffBIR/exp_dir/exp_vae02f01/checkpoints/0040000_vae.pt

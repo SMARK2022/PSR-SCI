@@ -103,7 +103,7 @@ class InferenceLoop:
                 raise ValueError(f"DiffBIR v1 doesn't support task: {self.args.task}, please use v2 by passsing '--version v2'")
         else:
             control_sd = load_model_from_url(MODELS["v2"])
-        self.cldm.load_controlnet_from_ckpt(torch.load("/home/newdisk/btsun/project/Predict-and-Subspace-Refine/DiffBIR/exp_dir/exp11f10/checkpoints/0015000.pt", map_location="cpu"))
+        self.cldm.load_controlnet_from_ckpt(torch.load("", map_location="cpu"))
         print(f"strictly load controlnet weight")
         self.cldm.eval().to(self.args.device)
         ### load diffusion
@@ -303,7 +303,7 @@ class UnAlignedBFRInferenceLoop(InferenceLoop):
             use_parse=True,
             det_model="retinaface_resnet50"
         )
-        
+
         def _loader() -> Generator[np.ndarray, None, None]:
             for lq in base_loader():
                 ### set input image
@@ -323,7 +323,7 @@ class UnAlignedBFRInferenceLoop(InferenceLoop):
                 ### restore background (hasn't been upscaled)
                 self.loop_ctx["is_face"] = False
                 yield lq
-        
+
         return _loader
 
     def after_load_lq(self, lq: np.ndarray) -> np.ndarray:

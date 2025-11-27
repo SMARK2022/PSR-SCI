@@ -13,11 +13,10 @@ from PIL import Image
 from torch import nn
 from torch.nn import functional as F
 
-sys.path.append('/home/newdisk/btsun/project/Predict-and-Subspace-Refine/DiffBIR/')
-from DiffBIR.utils.common import (count_vram_usage, wavelet_decomposition,
-                                  wavelet_reconstruction)
-from DiffBIR.utils.cond_fn import Guidance
-from DiffBIR.utils.sampler import SpacedSampler
+from .common import (count_vram_usage, wavelet_decomposition,
+                     wavelet_reconstruction)
+from .cond_fn import Guidance
+from .sampler import SpacedSampler
 
 
 def bicubic_resize(img: np.ndarray, scale: float) -> np.ndarray:
@@ -96,8 +95,8 @@ class Pipeline:
         old_control_scales = self.cldm.control_scales
         self.cldm.control_scales = [strength] * 13
         if better_start:
-            # using noised low frequency part of condition as a better start point of 
-            # reverse sampling, which can prevent our model from generating noise in 
+            # using noised low frequency part of condition as a better start point of
+            # reverse sampling, which can prevent our model from generating noise in
             # image background.
             _, low_freq = wavelet_decomposition(pad_clean)
             if not tiled:

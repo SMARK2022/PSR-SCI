@@ -9,8 +9,7 @@ from facexlib.parsing import init_parsing_model
 from facexlib.utils.misc import img2tensor, imwrite
 from torchvision.transforms.functional import normalize
 
-sys.path.append('/home/newdisk/btsun/project/Predict-and-Subspace-Refine/DiffBIR/')
-from DiffBIR.utils.common import load_file_from_url
+from .common import load_file_from_url
 
 
 def get_largest_face(det_faces, h, w):
@@ -79,7 +78,7 @@ class FaceRestoreHelper(object):
         elif self.template_3points:
             self.face_template = np.array([[192, 240], [319, 240], [257, 371]])
         else:
-            # standard 5 landmarks for FFHQ faces with 512 x 512 
+            # standard 5 landmarks for FFHQ faces with 512 x 512
             # facexlib
             self.face_template = np.array([[192.98138, 239.94708], [318.90277, 240.1936], [256.63416, 314.01935],
                                            [201.26117, 371.41043], [313.08905, 371.15118]])
@@ -228,7 +227,7 @@ class FaceRestoreHelper(object):
                 landmark = np.array([[bbox[i], bbox[i + 1]] for i in range(5, 15, 2)])
             self.all_landmarks_5.append(landmark)
             self.det_faces.append(bbox[0:5])
-            
+
         if len(self.det_faces) == 0:
             return 0
         if only_keep_largest:
@@ -377,7 +376,7 @@ class FaceRestoreHelper(object):
 
         assert len(self.restored_faces) == len(
             self.inverse_affine_matrices), ('length of restored_faces and affine_matrices are different.')
-        
+
         inv_mask_borders = []
         for restored_face, inverse_affine in zip(self.restored_faces, self.inverse_affine_matrices):
             if face_upsampler is not None:

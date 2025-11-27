@@ -78,7 +78,7 @@ dataset:
     target: dataset.codeformer.CodeformerDataset
     params:
       # training file list path
-      file_list: "/home/newdisk/btsun/project/Predict-and-Subspace-Refine/datasets/Images_Diff_hf/img_files.txt"
+      file_list: "#TODO datasets/Images_Diff_hf/img_files.txt"
       file_backend_cfg:
         target: dataset.file_backend.HardDiskBackend
       out_size: 512
@@ -89,9 +89,9 @@ dataset:
 
 train:
   # pretrained sd v2.1 path
-  sd_path: "/home/newdisk/btsun/project/Predict-and-Subspace-Refine/DiffBIR/weights/v2-1_512-ema-pruned.ckpt"
+  sd_path: "#TODO DiffBIR/weights/v2-1_512-ema-pruned.ckpt"
   # experiment directory path
-  exp_dir: "/home/newdisk/btsun/project/Predict-and-Subspace-Refine/DiffBIR/exp_dir/exp_vaehf05f04/"
+  exp_dir: "#TODO DiffBIR/exp_dir/exp_vaehf05f04/"
   # stage 1 swinir path
   learning_rate: 2e-5
   warmup_steps: 500
@@ -106,5 +106,5 @@ train:
   log_every: 25
   ckpt_every: 2000
   image_every: 100
-  # resume: "/home/newdisk/btsun/project/Predict-and-Subspace-Refine/DiffBIR/exp_dir/exp3/checkpoints/0015000.pt"
-  vae_resume: /home/newdisk/btsun/project/Predict-and-Subspace-Refine/DiffBIR/exp_dir/exp_vaehf04f03/checkpoints/0010000_vae.pt
+  # resume: "#TODO DiffBIR/exp_dir/exp3/checkpoints/0015000.pt"
+  vae_resume: #TODO DiffBIR/exp_dir/exp_vaehf04f03/checkpoints/0010000_vae.pt

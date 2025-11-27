@@ -1,32 +1,59 @@
 import os
+from pathlib import Path
 from argparse import ArgumentParser
 
 os.environ["NCCL_P2P_DISABLE"] = "1"
 os.environ["NCCL_IB_DISABLE"] = "1"
 
-import time
+import torch  # noqa: E402
+from omegaconf import OmegaConf  # noqa: E402
 
-import torch
-from omegaconf import OmegaConf
+import numpy as np  # noqa: E402  # noqa: E402
+import torch.nn.functional as F  # noqa: E402
+from accelerate import Accelerator  # noqa: E402
+from accelerate.utils import set_seed  # noqa: E402
+from einops import rearrange  # noqa: E402
+from model import ControlLDM, Diffusion  # noqa: E402
+from PIL import Image, ImageDraw, ImageFont  # noqa: E402
+from torch.optim.lr_scheduler import LambdaLR  # noqa: E402
+from torch.utils.data import DataLoader  # noqa: E402
+from torch.utils.tensorboard import SummaryWriter  # noqa: E402
+from torchvision.utils import make_grid  # noqa: E402
+from tqdm import tqdm  # noqa: E402
+from utils.common import instantiate_from_config  # noqa: E402
+from utils.sampler import SpacedSampler  # noqa: E402
+
+
+from lpips import LPIPS  # noqa: E402
+import torchvision.transforms as transforms  # noqa: E402
+
+
+# Stdlib
+def get_basedir(up: int = 3) -> Path:
+    """Return dir `up` levels above running .py/.ipynb."""
+    try:
+        p = Path(__file__).resolve()  # .py
+    except NameError:
+        try:
+            import ipynbname  # notebook
+
+            p = Path(ipynbname.path()).resolve()
+        except Exception:
+            p = (Path.cwd() / "_dummy").resolve()  # fallback
+    for _ in range(up):
+        p = p.parent
+    return p
+
 
 # 启用cuDNN
 torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark = True
+# --- Setup base dir & env, then import deps (condensed) ---
 
-import numpy as np
-import torch.nn.functional as F
-from accelerate import Accelerator
-from accelerate.utils import set_seed
-from einops import rearrange
-from model import ControlLDM, Diffusion
-from PIL import Image, ImageDraw, ImageFont
-from torch.optim.lr_scheduler import LambdaLR
-from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
-from torchvision.utils import make_grid
-from tqdm import tqdm
-from utils.common import instantiate_from_config, wavelet_decomposition
-from utils.sampler import SpacedSampler
+# only initialize BASE_DIR once
+BASE_DIR = globals().get("BASE_DIR")
+if not isinstance(BASE_DIR, Path) or not BASE_DIR.exists():
+    BASE_DIR = get_basedir()
 
 
 def augment_data(images: torch.Tensor) -> torch.Tensor:
@@ -180,10 +207,6 @@ def log_txt_as_img(wh, xc):
     return txts
 
 
-import torch
-from lpips import LPIPS
-import torchvision.transforms as transforms
-
 
 def torch_psnr(img, ref):  # input [batch_size, channels, height, width]
     img = (img * 256).round()
@@ -275,8 +298,8 @@ def main(args) -> None:
     )
     if accelerator.is_local_main_process:
         print(f"Dataset contains {len(dataset):,} images from {dataset.file_list}")
-    psnr_val_base = torch.load("/home/newdisk/btsun/project/Predict-and-Subspace-Refine/datasets/psnr_val_base.pt").cpu().float()
-    psnr_val_gt = torch.load("/home/newdisk/btsun/project/Predict-and-Subspace-Refine/datasets/psnr_val_gt.pt").cpu().float()
+    psnr_val_base = torch.load(str(BASE_DIR) +"/datasets/psnr_val_base.pt").cpu().float()
+    psnr_val_gt = torch.load(str(BASE_DIR) +"/datasets/psnr_val_gt.pt").cpu().float()
 
     # Prepare models for training:
     cldm.train().to(device)
