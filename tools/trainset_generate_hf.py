@@ -47,7 +47,7 @@ from torch.autograd import Variable
 from tqdm import tqdm
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 from packages.DiffBIR.utils.common import (
@@ -65,7 +65,7 @@ from packages.MST.simulation.train_code.utils import (
 torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark = True
 
-train_size = 64
+train_size = 16400
 batch_size = 64
 
 
@@ -451,130 +451,135 @@ mask3d_batch_train, input_mask_train = init_mask(
 
 
 # 打开文件用于写入图片文件名列表
-for batch_idx in tqdm(
-    range(0, train_size, batch_size), desc="Processing batches", unit="batch"
-):
-    gt_batch = shuffle_crop(train_set, batch_size)
-    gt_batch = Variable(gt_batch).cuda().float()
+with open("./datasets/Images_Diff_hf/img_files.txt", "w") as file_list:
+    for batch_idx in tqdm(
+        range(0, train_size, batch_size), desc="Processing batches", unit="batch"
+    ):
+        gt_batch = shuffle_crop(train_set, batch_size)
+        gt_batch = Variable(gt_batch).cuda().float()
 
-    # 定义噪声添加概率
-    # noise_probabilities = np.array([0.65, 0.25, 0.05, 0.03, 0.02])
-    noise_probabilities = np.array([0.80, 0.10, 0.050, 0.0375, 0.0125])
+        # 定义噪声添加概率
+        # noise_probabilities = np.array([0.65, 0.25, 0.05, 0.03, 0.02])
+        noise_probabilities = np.array([0.80, 0.10, 0.050, 0.0375, 0.0125])
 
-    # 添加噪声
-    gt_batch_noise = add_noise(gt_batch, noise_probabilities)
+        # 添加噪声
+        gt_batch_noise = add_noise(gt_batch, noise_probabilities)
 
-    # input_meas_batch = init_meas(gt_batch_noise, mask3d_batch_train, "H")
-    input_meas_batch = init_meas(gt_batch_noise, mask3d_batch_train, "Y")
+        # input_meas_batch = init_meas(gt_batch_noise, mask3d_batch_train, "H")
+        input_meas_batch = init_meas(gt_batch_noise, mask3d_batch_train, "Y")
 
-    with torch.no_grad():
-        initial_msi = DAUHST_model(input_meas_batch, input_mask_train)
+        with torch.no_grad():
+            initial_msi = DAUHST_model(input_meas_batch, input_mask_train)
 
-        # 使用自定义的概率生成随机数
-        probabilities = [0.5, 0.15, 0.35]
-        values = [3, 4, 5]
-        random_number = np.random.choice(values, p=probabilities)
+            # 使用自定义的概率生成随机数
+            probabilities = [0.5, 0.15, 0.35]
+            values = [3, 4, 5]
+            random_number = np.random.choice(values, p=probabilities)
 
-        inputs_msi_hf, inputs_msi_lf = wavelet_decomposition_msi(
-            initial_msi, random_number
-        )
-        inputs_gt_hf = gt_batch - inputs_msi_lf
+            inputs_msi_hf, inputs_msi_lf = wavelet_decomposition_msi(
+                initial_msi, random_number
+            )
+            inputs_gt_hf = gt_batch - inputs_msi_lf
 
-        encoded_base = ChannelVAE_model.encoder(inputs_msi_hf)
-        encoded_gt = ChannelVAE_model.encoder(inputs_gt_hf)
+            encoded_base = ChannelVAE_model.encoder(inputs_msi_hf)
+            encoded_gt = ChannelVAE_model.encoder(inputs_gt_hf)
 
-    RANGE_MAX = 0.85
-    RANGE_MIN = 0.15
+        RANGE_MAX = 0.85
+        RANGE_MIN = 0.15
 
-    range_channel = torch.tensor(
-        [
-            encoded_base[i].max() - encoded_base[i].min()
-            for i in range(encoded_base.shape[0])
-        ]
-    ).cuda()
-    max_val_channel = (
-        torch.tensor(
+        range_channel = torch.tensor(
             [
-                encoded_base[i].max()
-                + range_channel[i] / (RANGE_MAX - RANGE_MIN) * (1 - RANGE_MAX)
+                encoded_base[i].max() - encoded_base[i].min()
                 for i in range(encoded_base.shape[0])
             ]
+        ).cuda()
+        max_val_channel = (
+            torch.tensor(
+                [
+                    encoded_base[i].max()
+                    + range_channel[i] / (RANGE_MAX - RANGE_MIN) * (1 - RANGE_MAX)
+                    for i in range(encoded_base.shape[0])
+                ]
+            )
+            .cuda()
+            .view(batch_size, 1, 1, 1)
         )
-        .cuda()
-        .view(batch_size, 1, 1, 1)
-    )
-    min_val_channel = (
-        torch.tensor(
-            [
-                encoded_base[i].min()
-                - range_channel[i] / (RANGE_MAX - RANGE_MIN) * (RANGE_MIN)
-                for i in range(encoded_base.shape[0])
-            ]
-        )
-        .cuda()
-        .view(batch_size, 1, 1, 1)
-    )
-
-    encoded_base = (encoded_base - min_val_channel) / (
-        max_val_channel - min_val_channel
-    )
-    encoded_gt = (encoded_gt - min_val_channel) / (max_val_channel - min_val_channel)
-
-    # # 获取原始测量
-    # encoded_meas = init_meas(gt_batch, mask3d_batch_train, "Y")
-
-    # # 计算两个测量之间的差
-    # meas_difference = init_meas(initial_msi, mask3d_batch_train, "Y") - encoded_meas
-
-    # # 添加一个维度以匹配 (batch, ch, h, w) 的格式
-    # encoded_meas = encoded_meas.unsqueeze(1)  # 在 channel 维度插入
-    # meas_difference = meas_difference.unsqueeze(1)  # 在 channel 维度插入
-
-    # # 合并到一个 tensor 中，shape 将为 (batch, ch, h, w)
-    # encoded_meas = torch.cat(
-    #     (encoded_meas, meas_difference), dim=1
-    # )  # 在 channel 维度合并
-
-    # 将Tensor转换为PIL图像
-    def tensor_to_image(base, gt, index):  # meas,
-        deal_with_tiff(
-            base, str(BASE_DIR) + "/datasets/Images_Diff_hf/base/image_", index
-        )
-        deal_with_tiff(gt, str(BASE_DIR) + "/datasets/Images_Diff_hf/gt/image_", index)
-
-        # # 保存 meas 为 .npy 文件
-        # np.save(
-        #     str(BASE_DIR)
-        #     + f"/datasets/Images_Diff_hf/meas/meas_{batch_idx + index}.npy",
-        #     meas.cpu().numpy(),
-        # )
-
-    import tifffile as tiff
-
-    def deal_with_tiff(arg0, arg1, index):
-        """
-        This function converts a tensor to an image and saves it in TIFF format.
-
-        Args:
-            arg0: The tensor to be converted.
-            arg1: The base path for saving the image.
-            index: The index of the image.
-        """
-
-        # Convert the tensor to a NumPy array.
-        arg0 = arg0.squeeze().permute(1, 2, 0).clamp(0, 1).cpu().detach().numpy()
-
-        # Save the image in TIFF format using LZW compression.
-        tiff.imwrite(
-            f"{arg1}{batch_idx + index}.tif",
-            (arg0 * 65535).astype(np.uint16),
-            dtype=np.uint16,
-            compression="zlib",
+        min_val_channel = (
+            torch.tensor(
+                [
+                    encoded_base[i].min()
+                    - range_channel[i] / (RANGE_MAX - RANGE_MIN) * (RANGE_MIN)
+                    for i in range(encoded_base.shape[0])
+                ]
+            )
+            .cuda()
+            .view(batch_size, 1, 1, 1)
         )
 
-    # 循环遍历encoded_gt并保存为图片
-    for i in range(encoded_base.shape[0]):
-        tensor_to_image(encoded_base[i], encoded_gt[i], i)  # encoded_meas[i],
+        encoded_base = (encoded_base - min_val_channel) / (
+            max_val_channel - min_val_channel
+        )
+        encoded_gt = (encoded_gt - min_val_channel) / (max_val_channel - min_val_channel)
+
+        # # 获取原始测量
+        # encoded_meas = init_meas(gt_batch, mask3d_batch_train, "Y")
+
+        # # 计算两个测量之间的差
+        # meas_difference = init_meas(initial_msi, mask3d_batch_train, "Y") - encoded_meas
+
+        # # 添加一个维度以匹配 (batch, ch, h, w) 的格式
+        # encoded_meas = encoded_meas.unsqueeze(1)  # 在 channel 维度插入
+        # meas_difference = meas_difference.unsqueeze(1)  # 在 channel 维度插入
+
+        # # 合并到一个 tensor 中，shape 将为 (batch, ch, h, w)
+        # encoded_meas = torch.cat(
+        #     (encoded_meas, meas_difference), dim=1
+        # )  # 在 channel 维度合并
+
+        # 将Tensor转换为PIL图像
+        def tensor_to_image(base, gt, index):  # meas,
+            deal_with_tiff(
+                base, str(BASE_DIR) + "/datasets/Images_Diff_hf/base/image_", index
+            )
+            deal_with_tiff(gt, str(BASE_DIR) + "/datasets/Images_Diff_hf/gt/image_", index)
+
+            # # 保存 meas 为 .npy 文件
+            # np.save(
+            #     str(BASE_DIR)
+            #     + f"/datasets/Images_Diff_hf/meas/meas_{batch_idx + index}.npy",
+            #     meas.cpu().numpy(),
+            # )
+            # 写入图片文件名列表到 img_files.txt 文件
+            file_list.write(
+                f"{str(BASE_DIR)}/datasets/Images_Diff_hf/base/image_{batch_idx + index}.tif {str(BASE_DIR)}/datasets/Images_Diff_hf/gt/image_{batch_idx + index}.tif\n"
+            )
+
+        import tifffile as tiff
+
+        def deal_with_tiff(arg0, arg1, index):
+            """
+            This function converts a tensor to an image and saves it in TIFF format.
+
+            Args:
+                arg0: The tensor to be converted.
+                arg1: The base path for saving the image.
+                index: The index of the image.
+            """
+
+            # Convert the tensor to a NumPy array.
+            arg0 = arg0.squeeze().permute(1, 2, 0).clamp(0, 1).cpu().detach().numpy()
+
+            # Save the image in TIFF format using LZW compression.
+            tiff.imwrite(
+                f"{arg1}{batch_idx + index}.tif",
+                (arg0 * 65535).astype(np.uint16),
+                dtype=np.uint16,
+                compression="zlib",
+            )
+
+        # 循环遍历encoded_gt并保存为图片
+        for i in range(encoded_base.shape[0]):
+            tensor_to_image(encoded_base[i], encoded_gt[i], i)  # encoded_meas[i],
 
 
 batch_size = 10
